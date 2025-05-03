@@ -1,0 +1,48 @@
+/* Common button style base */
+.button {
+    background-color: purple;
+    color: white;
+    border: 2px solid yellow;
+    padding: 5px 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-decoration: none; /* For <a> elements styled like buttons */
+    display: inline-block;
+}
+
+/* Hover effect for all buttons */
+.button:hover {
+    background-color: darkviolet;
+}
+
+/* Optional: Differentiate buttons if needed */
+.login-button {
+    background-color: purple;
+    color: white;
+    border: 2px solid yellow;
+    padding: 5px 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.register-button {
+    background-color: darkgreen;
+    border: 2px solid lime;
+}
+
+.register-button:hover {
+    background-color: seagreen;
+}
+
+.logout-button {
+    background-color: crimson;
+    border: 2px solid pink;
+}
+
+.logout-button:hover {
+    background-color: darkred;
+}

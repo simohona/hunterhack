@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hunter Events</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body id="home">
+  <h1>Hunter Events</h1>
+  <p><img src="{{ url_for('static', filename='hunter_logo.png') }}" alt="Hunter Logo" width="150"></p>
+
+<!-- Login / Logout Buttons -->
+{% if current_user.is_authenticated %}
+<p>Welcome, {{ current_user.username }} |
+  <a href="/logout">Logout</a> |
+  <a href="/add">Add Event</a>
+</p>
+{% else %}
+<p><a href="/login"><button>Login</button></a> or <a href="/register">Register</a> to add events</p>
+{% endif %}
+
+  <h2>Upcoming Events</h2>
+
+  {% for event in events %}
+    <div>
+      <h3>{{ event[0] }}</h3> <!-- Title -->
+      <p><strong>Club:</strong> {{ event[1] }}</p> <!-- Club Name -->
+      <p><strong>Location:</strong> {{ event[2] }}</p> <!-- Event Location -->
+      <p>{{ event[3] }}</p>   <!-- Description -->
+      <p><strong>Date:</strong> {{ event[4] }}</p>
+
+      <!-- 👇 Add this to show flyer if it exists -->
+      {% if event[3] %}
+        <img src="{{ url_for('static', filename='flyers/' + event[3]) }}" alt="Event Flyer" width="300"><br>
+      {% endif %}
+
+      <hr>
+    </div>
+  {% endfor %}
+  
+  
+</body>
+</html>
+
