@@ -18,6 +18,8 @@ UPLOAD_FOLDER = 'static/flyers'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+
+
 # Initialize Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -74,13 +76,41 @@ init_db()
 
 # ----- Routes -----
 @app.route('/')
+@app.route('/', methods=['GET'])
 def index():
+    filter_club = request.args.get('club')
+    filter_location = request.args.get('location')
+    filter_date = request.args.get('date')
+
     conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
-    c.execute("SELECT title, club, location, description, date, flyer, user_id, id FROM events ORDER BY date")
+
+    query = "SELECT title, club, location, description, date, flyer, user_id, id FROM events WHERE 1=1"
+    params = []
+
+    if filter_club:
+        query += " AND club ILIKE %s"
+        params.append(f"%{filter_club}%")  # case-insensitive partial match
+
+    if filter_location:
+        query += " AND location ILIKE %s"
+        params.append(f"%{filter_location}%")
+
+    if filter_date:
+        query += " AND date = %s"
+        params.append(filter_date)
+
+    query += " ORDER BY date"
+    c.execute(query, tuple(params))
     events = c.fetchall()
     conn.close()
-    return render_template('index.html', events=events, user=current_user if current_user.is_authenticated else None)
+
+    return render_template('index.html',
+                           events=events,
+                           filter_club=filter_club,
+                           filter_location=filter_location,
+                           filter_date=filter_date)
+
 
 @app.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -199,6 +229,39 @@ def login():
 def logout():
     logout_user()
     return redirect('/')
+
+
+
+# @app.route('/', methods=['GET', 'POST'])
+# def home():
+#     filter_club = request.args.get('club')  # Get the filter by club
+#     filter_location = request.args.get('location')  # Get the filter by location
+#     filter_date = request.args.get('date')  # Get the filter by date
+    
+#     # Build the base query
+#     query = 'SELECT * FROM events WHERE 1=1'
+#     params = []
+
+#     # Add filter conditions if specified
+#     if filter_club:
+#         query += ' AND club = %s'
+#         params.append(filter_club)
+
+#     if filter_location:
+#         query += ' AND location = %s'
+#         params.append(filter_location)
+
+#     if filter_date:
+#         query += ' AND date = %s'
+#         params.append(filter_date)
+
+#     # Execute the query
+#     cursor = db.cursor()
+#     cursor.execute(query, tuple(params))
+#     events = cursor.fetchall()
+
+#     return render_template('home.html', events=events, filter_club=filter_club, filter_location=filter_location, filter_date=filter_date)
+
 
 # ----- Run App -----
 if __name__ == '__main__':

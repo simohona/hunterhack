@@ -33,7 +33,30 @@
 
 <main>
     <h2 class="section-title">Upcoming Events</h2>
+   <!-- Filter Form -->
+   <form action="/" method="get">
+        <div class="filter-form">
+            <label for="club">Filter by Club:</label>
+            <select name="club" id="club">
+                <option value="">All Clubs</option>
+                <option value="Tech" {% if filter_club == 'Tech' %}selected{% endif %}>Tech</option>
+                <option value="Music" {% if filter_club == 'Music' %}selected{% endif %}>Music</option>
+                <option value="Art" {% if filter_club == 'Art' %}selected{% endif %}>Art</option>
+                <!-- Add more clubs as needed -->
+            </select>
 
+            <label for="location">Filter by Location:</label>
+            <input type="text" name="location" id="location" value="{{ filter_location }}" placeholder="Enter location">
+
+            <label for="date">Filter by Date:</label>
+            <input type="date" name="date" id="date" value="{{ filter_date }}">
+
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+
+
+            <!---Event Listing--->
     <div class="event-listing">
       {% for event in events %}
       <div class="event-card">
