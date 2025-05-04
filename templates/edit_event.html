@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Event - Hunter Events</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body id="edit-event">
+
+<header>
+    <div class="header-content">
+        <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Hunter Logo" class="logo">
+        <h1>Edit Event</h1>
+    </div>
+
+    <!-- Login / Logout Buttons -->
+    <div class="auth-buttons">
+        {% if current_user.is_authenticated %}
+        <p>Welcome, {{ current_user.username }} |
+            <a href="/logout">Logout</a> |
+            <a href="/add">Add Event</a>
+        </p>
+        {% else %}
+        <p>
+            <a href="/login"><button>Login</button></a>
+            or
+            <a href="/register"><button>Register</button></a> to add events
+        </p>
+        {% endif %}
+    </div>
+</header>
+
+<main>
+    <h2 class="section-title">Edit Event Details</h2>
+
+    <form method="POST" action="{{ url_for('edit_event', event_id=event[0]) }}" enctype="multipart/form-data">
+        {% if csrf_token %}
+            {{ csrf_token() }}
+        {% endif %}
+        <label for="title">Event Title</label>
+        <input type="text" id="title" name="title" value="{{ event[1] }}" required><br>
+
+        <label for="club">Club</label>
+        <input type="text" id="club" name="club" value="{{ event[2] }}" required><br>
+
+        <label for="location">Location</label>
+        <input type="text" id="location" name="location" value="{{ event[3] }}" required><br>
+
+        <label for="description">Description</label>
+        <textarea id="description" name="description" required>{{ event[4] }}</textarea><br>
+
+        <label for="date">Event Date</label>
+        <input type="date" id="date" name="date" value="{{ event[5] }}" required><br>
+
+        <label for="flyer">Event Flyer</label>
+        <input type="file" id="flyer" name="flyer"><br>
+
+        <button type="submit">Save Changes</button>
+    </form>
+</main>
+
+<footer>
+    <p>&copy; 2025 Hunter Events. All rights reserved.</p>
+</footer>
+
+</body>
+</html>

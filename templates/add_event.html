@@ -1,18 +1,113 @@
 <!DOCTYPE html>
-<html>
-<head><title>Add Event</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add Event</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body#add-event {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 16px;
+      background-color: #b6c7f7; /* Soft pink background */
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-top: 30px;
+      color: #1e0f14;
+    }
+
+    form {
+      width: 90%;
+      max-width: 500px;
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+    }
+
+    button {
+      background-color: #2a333c;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #f11f81;
+    }
+
+    a {
+      color: #ad1b0b;
+      text-decoration: none;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
 <body id="add-event">
   <h1>Add a Club Event</h1>
   <form method="POST" enctype="multipart/form-data">
-    <input name="title" placeholder="Event Title"><br><br>
-    <input name="club" placeholder="Club Name"><br><br>
-    <input name="location" placeholder="Event Location"><br><br>
-    <textarea name="description" placeholder="Event Description"></textarea><br><br>
-    <input name="date" type="date"><br><br>
-    <label>Upload Flyer:</label>
-    <input type = "file" name= "flyer" accept ="image/*"><br><br>
+    {{ form.hidden_tag() }} <!-- This will add the CSRF token -->
+  
+    <label for="title">{{ form.title.label }}</label>
+    {{ form.title }}
+  
+    <label for="club">{{ form.club.label }}</label>
+    {{ form.club }}
+  
+    <label for="location">{{ form.location.label }}</label>
+    {{ form.location }}
+  
+    <label for="description">{{ form.description.label }}</label>
+    {{ form.description }}
+  
+    <label for="date">{{ form.date.label }}</label>
+    {{ form.date }}
+  
+    <label for="flyer">{{ form.flyer.label }}</label>
+    {{ form.flyer }}
+  
     <button type="submit">Submit</button>
   </form>
-  <a href="/">Back to Events</a>
+  <a href="/">← Back to Events</a>
 </body>
 </html>

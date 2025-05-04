@@ -3,19 +3,22 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 import psycopg2
 import os
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+print("DATABASE_URL =", DATABASE_URL)
 
+# Initialize Flask app
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 UPLOAD_FOLDER = 'static/flyers'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-# ----- Login Manager -----
+# Initialize Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -37,18 +40,19 @@ def load_user(user_id):
         return User(user[0], user[1])
     return None
 
+# ----- Utility Functions -----
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Initialize the database
+# ----- Initialize Database -----
 def init_db():
     conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
         )
     ''')
     c.execute('''
@@ -68,11 +72,12 @@ def init_db():
 
 init_db()
 
+# ----- Routes -----
 @app.route('/')
 def index():
     conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
-    c.execute("SELECT title, club, location, description, date, flyer FROM events ORDER BY date")
+    c.execute("SELECT title, club, location, description, date, flyer, user_id, id FROM events ORDER BY date")
     events = c.fetchall()
     conn.close()
     return render_template('index.html', events=events, user=current_user if current_user.is_authenticated else None)
@@ -103,15 +108,66 @@ def add_event():
         return redirect('/')
     return render_template('add_event.html')
 
+@app.route('/edit/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event(event_id):
+    conn = psycopg2.connect(DATABASE_URL)
+    c = conn.cursor()
+    c.execute("SELECT * FROM events WHERE id = %s AND user_id = %s", (event_id, current_user.id))
+    event = c.fetchone()
+
+    if not event:
+        conn.close()
+        return "Event not found or not authorized", 403
+
+    if request.method == 'POST':
+        title = request.form['title']
+        club = request.form['club']
+        location = request.form['location']
+        description = request.form['description']
+        date = request.form['date']
+
+        flyer = request.files.get('flyer')
+        flyer_filename = event[7]  # existing flyer
+
+        if flyer and allowed_file(flyer.filename):
+            filename = secure_filename(flyer.filename)
+            flyer.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            flyer_filename = filename
+
+        c.execute("""UPDATE events 
+                     SET title=%s, club=%s, location=%s, description=%s, date=%s, flyer=%s 
+                     WHERE id=%s AND user_id=%s""",
+                  (title, club, location, description, date, flyer_filename, event_id, current_user.id))
+        conn.commit()
+        conn.close()
+        return redirect('/')
+
+    conn.close()
+    return render_template('edit_event.html', event=event)
+
+@app.route('/delete/<int:event_id>')
+@login_required
+def delete_event(event_id):
+    conn = psycopg2.connect(DATABASE_URL)
+    c = conn.cursor()
+    c.execute("DELETE FROM events WHERE id = %s AND user_id = %s", (event_id, current_user.id))
+    conn.commit()
+    conn.close()
+    return redirect('/')
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        raw_password = request.form['password']
+        hashed_password = generate_password_hash(raw_password)
+
         conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
         try:
-            c.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+            c.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
             conn.commit()
         except psycopg2.errors.UniqueViolation:
             conn.rollback()
@@ -124,13 +180,15 @@ def register():
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        raw_password = request.form['password']
+
         conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
         c.execute("SELECT id, username, password FROM users WHERE username = %s", (username,))
         user = c.fetchone()
         conn.close()
-        if user and user[2] == password:
+
+        if user and check_password_hash(user[2], raw_password):
             login_user(User(user[0], user[1]))
             return redirect('/')
         return "Invalid login"
@@ -142,5 +200,6 @@ def logout():
     logout_user()
     return redirect('/')
 
+# ----- Run App -----
 if __name__ == '__main__':
     app.run(debug=True)
