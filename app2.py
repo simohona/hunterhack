@@ -1,8 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-import psycopg2  # For PostgreSQL
+import psycopg2
 import os
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -10,11 +13,7 @@ UPLOAD_FOLDER = 'static/flyers'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Database configuration (adjust these values)
-DB_HOST = os.environ.get('DB_HOST', 'your_db_host')  # Use environment variables for security
-DB_NAME = os.environ.get('DB_NAME', 'your_db_name')
-DB_USER = os.environ.get('DB_USER', 'your_db_user')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', 'your_db_password')
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # ----- Login Manager -----
 login_manager = LoginManager()
@@ -29,9 +28,9 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = get_db_connection()
+    conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
-    c.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))  # Use %s for PostgreSQL
+    c.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
     user = c.fetchone()
     conn.close()
     if user:
@@ -41,55 +40,37 @@ def load_user(user_id):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD
-        )
-        return conn
-    except psycopg2.Error as e:
-        print("Error connecting to database:", e)
-        return None
-
 # Initialize the database
 def init_db():
-    conn = get_db_connection()
-    if conn:
-        c = conn.cursor()
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,  -- Use SERIAL for auto-increment in PostgreSQL
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-            )
-        ''')
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS events (
-                id SERIAL PRIMARY KEY,
-                title TEXT,
-                club TEXT,
-                location TEXT,
-                description TEXT,
-                date TEXT,
-                user_id INTEGER,
-                flyer TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        ''')
-        conn.commit()
-        conn.close()
-    else:
-        print("Database connection failed, cannot initialize database.")
+    conn = psycopg2.connect(DATABASE_URL)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
+            club TEXT,
+            location TEXT,
+            description TEXT,
+            date TEXT,
+            user_id INTEGER REFERENCES users(id),
+            flyer TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 init_db()
 
-
 @app.route('/')
 def index():
-    conn = get_db_connection()
+    conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
     c.execute("SELECT title, club, location, description, date, flyer FROM events ORDER BY date")
     events = c.fetchall()
@@ -113,15 +94,12 @@ def add_event():
             flyer.save(flyer_path)
             flyer_filename = filename
 
-        conn = get_db_connection()
+        conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
-        c.execute("""
-            INSERT INTO events (title, club, location, description, date, user_id, flyer)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (title, club, location, description, date, current_user.id, flyer_filename))
+        c.execute("INSERT INTO events (title, club, location, description, date, user_id, flyer) VALUES (%s, %s, %s, %s, %s, %s, %s)", 
+                  (title, club, location, description, date, current_user.id, flyer_filename))
         conn.commit()
         conn.close()
-
         return redirect('/')
     return render_template('add_event.html')
 
@@ -130,12 +108,13 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        conn = get_db_connection()
+        conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
         try:
             c.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
             conn.commit()
-        except psycopg2.IntegrityError:
+        except psycopg2.errors.UniqueViolation:
+            conn.rollback()
             return "Username already exists"
         conn.close()
         return redirect('/login')
@@ -146,7 +125,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        conn = get_db_connection()
+        conn = psycopg2.connect(DATABASE_URL)
         c = conn.cursor()
         c.execute("SELECT id, username, password FROM users WHERE username = %s", (username,))
         user = c.fetchone()
